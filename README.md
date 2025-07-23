@@ -2,6 +2,7 @@ MVP IA para Recrutamento — Decision
 Projeto desenvolvido para otimizar o processo de recrutamento de talentos na área de TI utilizando Inteligência Artificial, em parceria com a empresa Decision.
 
 🚀 Objetivo
+
 O objetivo deste projeto é entregar uma solução de IA capaz de:
 
 Classificar candidatos conforme o potencial de contratação
@@ -14,6 +15,7 @@ Apoiar o time de RH nas tomadas de decisão com base em dados concretos
 
 
 🛠️ Tecnologias e principais bibliotecas
+
 Python 3.10+
 
 Streamlit (deploy web)
@@ -26,6 +28,7 @@ Matplotlib, Seaborn
 
 
 ⚙️ Como executar
+
 Clone o repositório
 
 bash
@@ -56,6 +59,7 @@ prospects.xlsx
 prospects_recusado.xlsx
 
 📄 Estrutura do Projeto
+
 bash
 Copiar
 Editar
@@ -67,6 +71,7 @@ Editar
 
 
 ✨ Funcionalidades
+
 Upload de arquivos de candidatos, vagas e resultados históricos
 
 Processamento automático de currículos e extração de informações
@@ -81,6 +86,7 @@ Interface web amigável via Streamlit
 
 
 💡 Como funciona?
+
 O usuário faz upload dos arquivos.
 
 O sistema integra as bases, faz feature engineering e análise de texto dos currículos.
@@ -94,6 +100,7 @@ Observação: Este projeto foi desenvolvido para fins acadêmicos/profissionais,
 
 
 📫 Contato
+
 Nome: Vinicius M. Novais
 
 LinkedIn: [Seu LinkedIn](https://www.linkedin.com/in/vinicius-m-novais-0197b2295)
