@@ -139,6 +139,63 @@ elif aba == "Idiomas em Não Contratados":
     st.pyplot(fig)
 
 # --- Gráficos numéricos e categóricos ---
+st.subheader("🔧 Engenharia de Features (pré-processamento)")
+
+df_feat = df_full.copy()
+
+def extrair_valor_remuneracao(valor):
+    if pd.isna(valor):
+        return np.nan
+    match = re.search(r'[\d\.]+', str(valor))
+    if match:
+        num = match.group().replace('.', '').replace(',', '')
+        try:
+            return float(num)
+        except:
+            return np.nan
+    return np.nan
+
+with st.spinner("Processando a coluna de remuneração..."):
+    df_feat['remuneracao'] = df_feat['remuneracao'].apply(extrair_valor_remuneracao)
+    df_feat['remuneracao'] = df_feat['remuneracao'].fillna(df_feat['remuneracao'].median())
+st.write("Distribuição da Remuneração (após limpeza):")
+st.write(df_feat['remuneracao'].describe())
+
+def contar_certificacoes(x):
+    return len([item for item in re.split(r'[;,/|]', str(x)) if item.strip()])
+
+with st.spinner("Contando certificações e cursos..."):
+    df_feat['num_certificacoes'] = df_feat['certificacoes'].fillna('').apply(contar_certificacoes)
+    df_feat['num_outras_certificacoes'] = df_feat['outras_certificacoes'].fillna('').apply(contar_certificacoes)
+    df_feat['num_cursos'] = df_feat['cursos'].fillna('').apply(contar_certificacoes)
+
+st.write("Exemplo de contagem de certificações/cursos:")
+st.write(df_feat[['certificacoes', 'num_certificacoes', 'outras_certificacoes', 'num_outras_certificacoes', 'cursos', 'num_cursos']].head())
+
+with st.spinner("Convertendo ano de conclusão para numérico..."):
+    df_feat['ano_conclusao'] = pd.to_numeric(df_feat['ano_conclusao'], errors='coerce').fillna(df_feat['ano_conclusao'].median())
+
+st.write("Ano de conclusão (exemplo):")
+st.write(df_feat['ano_conclusao'].describe())
+
+with st.spinner("Calculando match de senioridade..."):
+    df_feat['match_senioridade'] = df_feat.apply(
+        lambda row: int(str(row['nivel_profissional']).lower() in str(row['titulo_vaga_x']).lower()),
+        axis=1
+    )
+
+def contar_tecnologias_comuns(row):
+    cand = set([c.strip() for c in re.split(r'[;/,\n|.]', str(row['conhecimentos_tecnicos']).lower()) if c.strip()])
+    vaga = set([v.strip() for v in re.split(r'[;/,\n|.]', str(row.get('competencia_tecnicas_e_comportamentais', '')).lower()) if v.strip()])
+    return len(cand & vaga)
+
+with st.spinner("Calculando match de tecnologias..."):
+    df_feat['match_tecnologias'] = df_feat.apply(contar_tecnologias_comuns, axis=1)
+
+st.write("Exemplo de engenharia de features:")
+st.write(df_feat[['remuneracao', 'num_certificacoes', 'num_outras_certificacoes', 'num_cursos', 'ano_conclusao', 'match_senioridade', 'match_tecnologias']].head())
+
+
 st.header("📈 Análise Numérica e Categórica")
 features_numericas = ['remuneracao', 'num_certificacoes', 'num_outras_certificacoes', 'num_cursos']
 features_categoricas = ['nivel_profissional', 'nivel_academico_x', 'nivel_ingles_x']
