@@ -333,7 +333,7 @@ for col in features:
 
 X = df_feat[features]
 y = df_feat[target]
-id_candidato_arr = df_feat['idx_original'].values  # <-- Usando o id_candidato!
+idx_original = df_feat['idx_original'].values
 
 # 3. SMOTE (guarde o array do id_candidato)
 smote = SMOTE(sampling_strategy=1.0, random_state=42)
