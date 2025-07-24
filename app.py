@@ -242,64 +242,47 @@ top_universidades = [
 ]
 top_universidades = [u.upper() for u in top_universidades]
 
-df_full['instituicao_ensino_superior'] = df_full['instituicao_ensino_superior'].fillna('').astype(str)
-df_full['top_universidade'] = df_full['instituicao_ensino_superior'].apply(
+df_feat['instituicao_ensino_superior'] = df_feat['instituicao_ensino_superior'].fillna('').astype(str)
+df_feat['top_universidade'] = df_feat['instituicao_ensino_superior'].apply(
     lambda x: int(any(univ in x.upper() for univ in top_universidades))
 )
-st.write("Proporção de contratação para Top Universidades:")
-st.write(df_full.groupby('top_universidade')['match'].mean())
+st.write("Proporção de contratação para Universidades Prestigiadas")
+st.write(df_feat.groupby('top_universidade')['match'].mean())
 
 top_linguagens = [
     "python", "java", "javascript", "typescript", "c#", "c++", "c", "php", "ruby", "swift",
     "go", "kotlin", "r", "scala", "dart", "rust", "perl", "objective-c", "matlab", "shell"
 ]
-df_full['conhecimentos_tecnicos'] = df_full['conhecimentos_tecnicos'].fillna('').astype(str)
+df_feat['conhecimentos_tecnicos'] = df_feat['conhecimentos_tecnicos'].fillna('').astype(str)
 for lang in top_linguagens:
     col_name = f'conhece_{lang.replace("#", "sharp").replace("++", "pp").replace("-", "_").replace(" ", "_")}'
-    df_full[col_name] = df_full['conhecimentos_tecnicos'].str.lower().apply(lambda x: int(lang in x))
-df_full['num_top_linguagens'] = df_full[
+    if col_name not in df_feat.columns:
+        df_feat[col_name] = df_feat['conhecimentos_tecnicos'].str.lower().apply(lambda x: int(lang in x))
+
+df_feat['num_top_linguagens'] = df_feat[
     [f'conhece_{lang.replace("#", "sharp").replace("++", "pp").replace("-", "_").replace(" ", "_")}' for lang in top_linguagens]
 ].sum(axis=1)
-st.write("Proporção de contratação por quantidade de top linguagens no currículo:")
-st.write(df_full.groupby('num_top_linguagens')['match'].mean())
+
+# Gera a coluna 'possui_experiencia'
+if 'conhecimentos_tecnicos' in df_feat.columns:
+    df_feat['possui_experiencia'] = df_feat['conhecimentos_tecnicos'].str.contains('experiência', case=False, na=False).astype(int)
+else:
+    df_feat['possui_experiencia'] = 0  # ou np.nan
+
+# Gera a coluna 'num_palavras_curriculo'
+if 'curriculo_pt' in df_feat.columns:
+    df_feat['num_palavras_curriculo'] = df_feat['curriculo_pt'].fillna('').apply(lambda x: len(str(x).split()))
+else:
+    df_feat['num_palavras_curriculo'] = 0  # ou np.nan
+    
+st.write("Proporção de contratação por quantidade de linguagens mais utilizadas no currículo:")
+st.write(df_feat.groupby('num_top_linguagens')['match'].mean())
 
 # =============================
 # 4. Pipeline do Modelo (IA)
 # =============================
 
 # Engenharia final de features para o modelo
-df_feat = df_full.copy()
-def extrair_valor_remuneracao(valor):
-    if pd.isna(valor):
-        return np.nan
-    match = re.search(r'[\d\.]+', str(valor))
-    if match:
-        num = match.group().replace('.', '').replace(',', '')
-        try:
-            return float(num)
-        except:
-            return np.nan
-    return np.nan
-
-df_feat['remuneracao'] = df_feat['remuneracao'].apply(extrair_valor_remuneracao)
-df_feat['remuneracao'] = df_feat['remuneracao'].fillna(df_feat['remuneracao'].median())
-
-def contar_certificacoes(x):
-    return len([item for item in re.split(r'[;,/|]', str(x)) if item.strip()])
-df_feat['num_certificacoes'] = df_feat['certificacoes'].fillna('').apply(contar_certificacoes)
-df_feat['num_outras_certificacoes'] = df_feat['outras_certificacoes'].fillna('').apply(contar_certificacoes)
-df_feat['num_cursos'] = df_feat['cursos'].fillna('').apply(contar_certificacoes)
-df_feat['ano_conclusao'] = pd.to_numeric(df_feat['ano_conclusao'], errors='coerce').fillna(df_feat['ano_conclusao'].median())
-df_feat['match_senioridade'] = df_feat.apply(
-    lambda row: int(str(row['nivel_profissional']).lower() in str(row['titulo_vaga_x']).lower()),
-    axis=1
-)
-def contar_tecnologias_comuns(row):
-    cand = set([c.strip() for c in re.split(r'[;/,\n|.]', str(row['conhecimentos_tecnicos']).lower()) if c.strip()])
-    vaga = set([v.strip() for v in re.split(r'[;/,\n|.]', str(row.get('competencia_tecnicas_e_comportamentais', '')).lower()) if v.strip()])
-    return len(cand & vaga)
-df_feat['match_tecnologias'] = df_feat.apply(contar_tecnologias_comuns, axis=1)
-
 # Features do modelo
 features = [
     'remuneracao',
