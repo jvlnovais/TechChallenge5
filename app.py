@@ -322,35 +322,49 @@ features = [
  'num_palavras_curriculo'
 ]
 target = 'match'
+df_feat['idx_original'] = df_feat.index
 
+# 1. Encoding
 for col in features:
-    df_feat[col] = df_feat[col].fillna('desconhecido').astype(str)
-    le = LabelEncoder()
-    df_feat[col] = le.fit_transform(df_feat[col])
+    if df_feat[col].dtype == object:
+        df_feat[col] = df_feat[col].fillna('desconhecido').astype(str)
+        le = LabelEncoder()
+        df_feat[col] = le.fit_transform(df_feat[col])
 
-tfidf = TfidfVectorizer(max_features=100, stop_words=stopwords_pt)
-tfidf_matrix = tfidf.fit_transform(df_feat['curriculo_pt'].fillna(''))
-X_base = df_feat[features].values
-X_base = StandardScaler().fit_transform(X_base)
-if not isinstance(X_base, csr_matrix):
-    X_base = csr_matrix(X_base)
-X_final = hstack([X_base, tfidf_matrix])
 X = df_feat[features]
 y = df_feat[target]
+idx_original = df_feat['idx_original'].values
 
-# 2. SMOTE para balanceamento
+# 2. SMOTE mantendo os índices corretos
 smote = SMOTE(sampling_strategy=1.0, random_state=42)
 X_res, y_res = smote.fit_resample(X, y)
 
-st.write("### Distribuição após SMOTE:")
-st.write(pd.Series(y_res).value_counts(normalize=True))
+def make_idx_resample(y, smote, X):
+    """Expande o índice dos dados originais para bater com SMOTE"""
+    y = np.array(y)
+    X = np.array(X)
+    orig_counts = Counter(y)
+    new_counts = Counter(smote.fit_resample(X, y)[1])
+    sint_counts = {c: new_counts[c] - orig_counts[c] for c in orig_counts}
+    idx_0 = np.where(y == 0)[0]
+    idx_1 = np.where(y == 1)[0]
+    idx_res = np.concatenate([
+        idx_original[idx_0],
+        idx_original[idx_1],
+        np.random.choice(idx_original[idx_1], size=sint_counts[1], replace=True)  # Sintéticos da minoria
+    ])
+    return idx_res
 
-# 3. Split de treino/teste
-X_train, X_test, y_train, y_test = train_test_split(
-    X_res, y_res, test_size=0.2, random_state=42, stratify=y_res
+idx_res = make_idx_resample(y, smote, X)
+
+st.write(f"Checagem de tamanhos: X_res: {X_res.shape}, y_res: {y_res.shape}, idx_res: {idx_res.shape}")
+
+# 3. Split
+X_train, X_test, y_train, y_test, idx_train, idx_test = train_test_split(
+    X_res, y_res, idx_res, test_size=0.2, random_state=42, stratify=y_res
 )
 
-# 4. VotingClassifier com 4 algoritmos
+# 4. Modelo
 voting = VotingClassifier(estimators=[
     ('rf', RandomForestClassifier(random_state=42)),
     ('gb', GradientBoostingClassifier(random_state=42)),
@@ -358,25 +372,30 @@ voting = VotingClassifier(estimators=[
     ('dt', DecisionTreeClassifier(random_state=42))
 ], voting='soft')
 
-with st.spinner("Treinando Voting Classifier..."):
+with st.spinner("Treinando IA..."):
     voting.fit(X_train, y_train)
     y_pred = voting.predict(X_test)
+    y_pred_proba = voting.predict_proba(X_test)[:, 1]
 
-st.success("Modelo treinado!")
-st.write("#### Classification Report")
-st.dataframe(pd.DataFrame(classification_report(y_test, y_pred, output_dict=True)).T.style.format("{:.2f}"))
-st.write("#### Matriz de Confusão")
+st.write("### Relatório de Classificação")
+st.dataframe(pd.DataFrame(classification_report(y_test, y_pred, output_dict=True)).T)
+st.write("### Matriz de Confusão")
 st.write(confusion_matrix(y_test, y_pred))
 
-st.header("🏆 Top 1% dos Candidatos Sugeridos pela IA")
+# 5. Top 1%
+st.header("🏆 Top 1% dos candidatos sugeridos (com identificação)")
 top_percent = 0.01
-top_n = max(1, int(len(y_pred) * top_percent))
-idx_top = np.argsort(y_pred)[-top_n:][::-1]
-df_top = pd.DataFrame(X_test[idx_top].todense() if hasattr(X_test, "todense") else X_test[idx_top])
-df_top['score_contratado'] = y_pred_proba[idx_top]
-st.dataframe(df_top)
+top_n = max(1, int(len(y_pred_proba) * top_percent))
+idx_top = np.argsort(y_pred_proba)[-top_n:][::-1]
+idx_top_original = idx_test[idx_top]
 
-csv = df_top.to_csv(index=False).encode('utf-8')
+df_top = df_feat.loc[idx_top_original, :].copy()
+df_top['score_contratado'] = y_pred_proba[idx_top]
+
+colunas_exibir = ['id_candidato', 'id_vaga', 'score_contratado']
+st.dataframe(df_top[colunas_exibir])
+
+csv = df_top[colunas_exibir].to_csv(index=False).encode('utf-8')
 st.download_button(
     label="⬇️ Baixar Top 1% dos Candidatos (CSV)",
     data=csv,
