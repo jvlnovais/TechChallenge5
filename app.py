@@ -215,13 +215,13 @@ features_numericas = ['remuneracao', 'num_certificacoes', 'num_outras_certificac
 features_categoricas = ['nivel_profissional', 'nivel_academico_x', 'nivel_ingles_x']
 
 st.subheader("Médias por situação de contratação")
-st.write(df_full.groupby('match')[features_numericas].mean())
+st.write(df_feat.groupby('match')[features_numericas].mean())
 
 st.subheader("Proporção de contratação por nível profissional")
-st.write(df_full.groupby('nivel_profissional')['match'].mean().sort_values(ascending=False))
+st.write(df_feat.groupby('nivel_profissional')['match'].mean().sort_values(ascending=False))
 
 for feat in features_categoricas:
-    proporcao = df_full.groupby(feat)['match'].mean().sort_values(ascending=False)
+    proporcao = df_feat.groupby(feat)['match'].mean().sort_values(ascending=False)
     fig, ax = plt.subplots(figsize=(10, 4))
     sns.barplot(x=proporcao.index.astype(str), y=proporcao.values, palette="viridis", ax=ax)
     plt.title(f'Proporção de contratação por {feat}')
