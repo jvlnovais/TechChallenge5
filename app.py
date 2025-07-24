@@ -365,7 +365,7 @@ idx_res = make_idx_resample(y, smote, X)
 
 # 4. Split mantendo id_candidato_res
 X_train, X_test, y_train, y_test, id_candidato_train, id_candidato_test = train_test_split(
-    X_res, y_res, id_res, test_size=0.2, random_state=42, stratify=y_res
+    X_res, y_res, idx_res, test_size=0.2, random_state=42, stratify=y_res
 )
 
 # 5. Modelo
