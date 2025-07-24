@@ -335,18 +335,22 @@ X_base = StandardScaler().fit_transform(X_base)
 if not isinstance(X_base, csr_matrix):
     X_base = csr_matrix(X_base)
 X_final = hstack([X_base, tfidf_matrix])
+X = df_feat[features]
 y = df_feat[target]
 
-# SMOTE
+# 2. SMOTE para balanceamento
 smote = SMOTE(sampling_strategy=1.0, random_state=42)
-X_res, y_res = smote.fit_resample(X_final, y)
+X_res, y_res = smote.fit_resample(X, y)
 
-# Split
+st.write("### Distribuição após SMOTE:")
+st.write(pd.Series(y_res).value_counts(normalize=True))
+
+# 3. Split de treino/teste
 X_train, X_test, y_train, y_test = train_test_split(
     X_res, y_res, test_size=0.2, random_state=42, stratify=y_res
 )
 
-# VotingClassifier
+# 4. VotingClassifier com 4 algoritmos
 voting = VotingClassifier(estimators=[
     ('rf', RandomForestClassifier(random_state=42)),
     ('gb', GradientBoostingClassifier(random_state=42)),
@@ -354,23 +358,20 @@ voting = VotingClassifier(estimators=[
     ('dt', DecisionTreeClassifier(random_state=42))
 ], voting='soft')
 
-with st.spinner("Treinando IA para recrutamento..."):
+with st.spinner("Treinando Voting Classifier..."):
     voting.fit(X_train, y_train)
     y_pred = voting.predict(X_test)
-    y_pred_proba = voting.predict_proba(X_test)[:, 1]
 
-st.success("Modelo treinado! Veja as métricas:")
-st.write("### Métricas do Modelo")
-report = classification_report(y_test, y_pred, output_dict=True)
-df_report = pd.DataFrame(report).T
-st.dataframe(df_report.style.format("{:.2f}"))
+st.success("Modelo treinado!")
+st.write("#### Classification Report")
+st.dataframe(pd.DataFrame(classification_report(y_test, y_pred, output_dict=True)).T.style.format("{:.2f}"))
 st.write("#### Matriz de Confusão")
 st.write(confusion_matrix(y_test, y_pred))
 
 st.header("🏆 Top 1% dos Candidatos Sugeridos pela IA")
 top_percent = 0.01
-top_n = max(1, int(len(y_pred_proba) * top_percent))
-idx_top = np.argsort(y_pred_proba)[-top_n:][::-1]
+top_n = max(1, int(len(y_pred) * top_percent))
+idx_top = np.argsort(y_pred)[-top_n:][::-1]
 df_top = pd.DataFrame(X_test[idx_top].todense() if hasattr(X_test, "todense") else X_test[idx_top])
 df_top['score_contratado'] = y_pred_proba[idx_top]
 st.dataframe(df_top)
