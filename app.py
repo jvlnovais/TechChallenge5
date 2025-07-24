@@ -269,10 +269,21 @@ st.write(df_full.groupby('num_top_linguagens')['match'].mean())
 
 # Engenharia final de features para o modelo
 df_feat = df_full.copy()
-df_feat['remuneracao'] = df_feat['remuneracao'].apply(
-    lambda valor: float(re.sub(r'[^\d]', '', str(valor))) if pd.notna(valor) else np.nan
-)
+def extrair_valor_remuneracao(valor):
+    if pd.isna(valor):
+        return np.nan
+    match = re.search(r'[\d\.]+', str(valor))
+    if match:
+        num = match.group().replace('.', '').replace(',', '')
+        try:
+            return float(num)
+        except:
+            return np.nan
+    return np.nan
+
+df_feat['remuneracao'] = df_feat['remuneracao'].apply(extrair_valor_remuneracao)
 df_feat['remuneracao'] = df_feat['remuneracao'].fillna(df_feat['remuneracao'].median())
+
 def contar_certificacoes(x):
     return len([item for item in re.split(r'[;,/|]', str(x)) if item.strip()])
 df_feat['num_certificacoes'] = df_feat['certificacoes'].fillna('').apply(contar_certificacoes)
