@@ -350,7 +350,7 @@ X_train, X_test, y_train, y_test = train_test_split(
 voting = VotingClassifier(estimators=[
     ('rf', RandomForestClassifier(random_state=42)),
     ('gb', GradientBoostingClassifier(random_state=42)),
-    ('lr', LogisticRegression(max_iter=2000, solver='saga', random_state=42)),
+    ('lr', LogisticRegression(max_iter=1000, solver='saga', random_state=42)),
     ('dt', DecisionTreeClassifier(random_state=42))
 ], voting='soft')
 
