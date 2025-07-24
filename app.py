@@ -365,7 +365,7 @@ idx_res = make_idx_resample(y, smote, X)
 
 # 4. Split mantendo id_candidato_res
 X_train, X_test, y_train, y_test, id_candidato_train, id_candidato_test = train_test_split(
-    X_res, y_res, id_candidato_res, test_size=0.2, random_state=42, stratify=y_res
+    X_res, y_res, id_res, test_size=0.2, random_state=42, stratify=y_res
 )
 
 # 5. Modelo
@@ -393,11 +393,16 @@ top_n = max(1, int(len(y_pred_proba) * top_percent))
 idx_top = np.argsort(y_pred_proba)[-top_n:][::-1]
 idx_top_original = idx_test[idx_top]
 
-df_top = df_feat[df_feat['id_candidato'].isin(id_candidato_top)].copy()
+df_top = df_feat.loc[idx_top_original, :].copy()
 df_top['score_contratado'] = y_pred_proba[idx_top]
 
-colunas_exibir = ['id_candidato', 'id_vaga', 'score_contratado']
+if 'id_candidato' in df_top.columns and 'id_vaga' in df_top.columns:
+    df_top = df_top.merge(df_applicants[['id_candidato']], on='id_candidato', how='left')
+
+colunas_exibir = ['id_candidato', 'id_vaga', 'score_contratado'] if 'id_candidato' in df_top.columns else ['id_candidato', 'id_vaga', 'score_contratado']
 st.dataframe(df_top[colunas_exibir])
+
+
 
 csv = df_top[colunas_exibir].to_csv(index=False).encode('utf-8')
 st.download_button(
