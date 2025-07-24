@@ -24,16 +24,6 @@ stopwords_pt = stopwords.words('portuguese')
 st.set_page_config(page_title="MVP IA para Recrutamento Decision", layout="wide")
 st.title("🤖 MVP Inteligência Artificial para Recrutamento (Decision)")
 
-st.sidebar.header("1️⃣ Upload dos arquivos base")
-df_applicants = st.sidebar.file_uploader("Applicants (Excel)", type=["xlsx"])
-df_vagas = st.sidebar.file_uploader("Vagas (Excel)", type=["xlsx"])
-df_prospects = st.sidebar.file_uploader("Prospects (Excel)", type=["xlsx"])
-df_prospects_recusado = st.sidebar.file_uploader("Prospects Recusados (Excel)", type=["xlsx"])
-
-if not all([df_applicants, df_vagas, df_prospects, df_prospects_recusado]):
-    st.info("⏳ Faça upload de todos os arquivos para iniciar a análise.")
-    st.stop()
-
 # --- 1. Carregamento dos arquivos
 df_applicants = pd.read_excel(df_applicants)
 df_vagas = pd.read_excel(df_vagas)
