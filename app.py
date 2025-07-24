@@ -174,6 +174,10 @@ st.write(df_feat['remuneracao'].describe())
 def contar_certificacoes(x):
     return len([item for item in re.split(r'[;,/|]', str(x)) if item.strip()])
 
+df_feat['num_certificacoes'] = df_feat['certificacoes'].fillna('').apply(contar_certificacoes)
+df_feat['num_outras_certificacoes'] = df_feat['outras_certificacoes'].fillna('').apply(contar_certificacoes)
+df_feat['num_cursos'] = df_feat['cursos'].fillna('').apply(contar_certificacoes)
+
 with st.spinner("Contando certificações e cursos..."):
     df_feat['num_certificacoes'] = df_feat['certificacoes'].fillna('').apply(contar_certificacoes)
     df_feat['num_outras_certificacoes'] = df_feat['outras_certificacoes'].fillna('').apply(contar_certificacoes)
