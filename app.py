@@ -324,7 +324,7 @@ features = [
 target = 'match'
 df_feat['idx_original'] = df_feat.index
 
-# 1. Encoding
+# 2. Prepara as features normalmente
 for col in features:
     if df_feat[col].dtype == object:
         df_feat[col] = df_feat[col].fillna('desconhecido').astype(str)
@@ -333,19 +333,26 @@ for col in features:
 
 X = df_feat[features]
 y = df_feat[target]
-idx_original = df_feat['idx_original'].values
+id_candidato_arr = df_feat['idx_original'].values  # <-- Usando o id_candidato!
 
-# 2. SMOTE mantendo os índices corretos
+# 3. SMOTE (guarde o array do id_candidato)
 smote = SMOTE(sampling_strategy=1.0, random_state=42)
 X_res, y_res = smote.fit_resample(X, y)
 
 def make_idx_resample(y, smote, X):
-    """Expande o índice dos dados originais para bater com SMOTE"""
+    """
+    Função para expandir o índice dos dados originais para bater com SMOTE.
+    Retorna o array de índices correspondente ao X_res gerado pelo SMOTE.
+    """
     y = np.array(y)
     X = np.array(X)
+    # Conta quantos de cada classe havia antes do SMOTE
     orig_counts = Counter(y)
+    # Conta quantos tem depois do SMOTE
     new_counts = Counter(smote.fit_resample(X, y)[1])
+    # Quantos sintéticos foram criados para cada classe
     sint_counts = {c: new_counts[c] - orig_counts[c] for c in orig_counts}
+    # Índices dos exemplos originais para cada classe
     idx_0 = np.where(y == 0)[0]
     idx_1 = np.where(y == 1)[0]
     idx_res = np.concatenate([
@@ -354,17 +361,14 @@ def make_idx_resample(y, smote, X):
         np.random.choice(idx_original[idx_1], size=sint_counts[1], replace=True)  # Sintéticos da minoria
     ])
     return idx_res
-
 idx_res = make_idx_resample(y, smote, X)
 
-st.write(f"Checagem de tamanhos: X_res: {X_res.shape}, y_res: {y_res.shape}, idx_res: {idx_res.shape}")
-
-# 3. Split
-X_train, X_test, y_train, y_test, idx_train, idx_test = train_test_split(
-    X_res, y_res, idx_res, test_size=0.2, random_state=42, stratify=y_res
+# 4. Split mantendo id_candidato_res
+X_train, X_test, y_train, y_test, id_candidato_train, id_candidato_test = train_test_split(
+    X_res, y_res, id_candidato_res, test_size=0.2, random_state=42, stratify=y_res
 )
 
-# 4. Modelo
+# 5. Modelo
 voting = VotingClassifier(estimators=[
     ('rf', RandomForestClassifier(random_state=42)),
     ('gb', GradientBoostingClassifier(random_state=42)),
@@ -389,7 +393,7 @@ top_n = max(1, int(len(y_pred_proba) * top_percent))
 idx_top = np.argsort(y_pred_proba)[-top_n:][::-1]
 idx_top_original = idx_test[idx_top]
 
-df_top = df_feat.loc[idx_top_original, :].copy()
+df_top = df_feat[df_feat['id_candidato'].isin(id_candidato_top)].copy()
 df_top['score_contratado'] = y_pred_proba[idx_top]
 
 colunas_exibir = ['id_candidato', 'id_vaga', 'score_contratado']
